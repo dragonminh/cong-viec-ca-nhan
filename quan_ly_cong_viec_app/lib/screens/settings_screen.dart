@@ -6,14 +6,12 @@ import 'package:quan_ly_cong_viec_app/screens/login_screen.dart';
 import 'package:quan_ly_cong_viec_app/models/user.dart';
 import 'package:quan_ly_cong_viec_app/providers/auth_provider.dart';
 import 'package:quan_ly_cong_viec_app/screens/edit_profile_screen.dart';
-// BƯỚC 5.1: Import Dịch vụ Thông báo
 import 'package:quan_ly_cong_viec_app/services/notification_service.dart';
-
+// ĐÃ XÓA import '...flutter_gen...'
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-  // ... (Các hàm _themeModeToString và _showThemeDialog giữ nguyên)
   String _themeModeToString(ThemeMode themeMode) {
     switch (themeMode) {
       case ThemeMode.light:
@@ -74,21 +72,22 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
     final currentUser = authProvider.user;
 
+    // ĐÃ XÓA 'final localizations = ...'
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Cài đặt')),
+      // ĐÃ SỬA LẠI AppBar
+      appBar: AppBar(title: const Text('Cài đặt')), 
       body: ListView(
         children: [
-          // ... (Các ListTile Giao diện, Ngôn ngữ, Thông tin tài khoản giữ nguyên)
           ListTile(
             leading: const Icon(Icons.brightness_6),
-            title: const Text('Giao diện'),
+            title: const Text('Giao diện'), // Dùng chữ cứng
             subtitle: Text(_themeModeToString(themeProvider.themeMode)),
             onTap: () {
               _showThemeDialog(context, themeProvider);
@@ -97,7 +96,7 @@ class SettingsScreen extends StatelessWidget {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.language),
-            title: const Text('Ngôn ngữ'),
+            title: const Text('Ngôn ngữ'), // Dùng chữ cứng
             subtitle: const Text('Tiếng Việt'),
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -112,51 +111,52 @@ class SettingsScreen extends StatelessWidget {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.person_outline),
-            title: const Text('Thông tin tài khoản'),
-            subtitle: Text(currentUser != null ? 'Thay đổi ${currentUser.name}, ${currentUser.email}' : 'Không có thông tin'),
+            title: const Text('Thông tin tài khoản'), // Dùng chữ cứng
+            subtitle: Text(currentUser != null
+                ? 'Thay đổi ${currentUser.name}, ${currentUser.email}'
+                : 'Không có thông tin'),
             onTap: () async {
               if (currentUser == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Không thể tải thông tin người dùng.'))
-                );
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Không thể tải thông tin người dùng.')));
                 return;
               }
               final updatedUser = await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => EditProfileScreen(currentUser: currentUser),
+                  builder: (context) =>
+                      EditProfileScreen(currentUser: currentUser),
                 ),
               );
-              if (updatedUser != null && updatedUser is User) {
-                authProvider.setUser(updatedUser);
+
+              // Sửa lỗi: Đảm bảo authProvider được truy cập đúng cách
+              if (updatedUser != null && updatedUser is User && context.mounted) {
+                Provider.of<AuthProvider>(context, listen: false).setUser(updatedUser);
               }
             },
           ),
-
-          // BƯỚC 5.2: THÊM NÚT TEST VÀO ĐÂY
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.notification_add_outlined, color: Colors.blue),
-            title: const Text('Gửi thông báo thử nghiệm'),
+            leading:
+                const Icon(Icons.notification_add_outlined, color: Colors.blue),
+            title: const Text('Gửi thông báo thử nghiệm'), // Dùng chữ cứng
             onTap: () {
               NotificationService.showTestNotification();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Đã gửi yêu cầu thông báo! Hãy kiểm tra thanh trạng thái.'))
-              );
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text(
+                      'Đã gửi yêu cầu thông báo! Hãy kiểm tra thanh trạng thái.')));
             },
           ),
-
-
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text(
+            title: const Text( // Dùng chữ cứng
               'Đăng xuất',
               style: TextStyle(color: Colors.red),
             ),
             onTap: () async {
-              // Xóa user khỏi provider khi đăng xuất
-              authProvider.clearUser();
+              // Sửa lỗi: Đảm bảo authProvider được truy cập đúng cách
+              Provider.of<AuthProvider>(context, listen: false).clearUser();
               await SecureStorageService.deleteToken();
 
               if (context.mounted) {
@@ -172,4 +172,3 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 }
-

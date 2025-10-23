@@ -14,7 +14,8 @@ class TaskController extends Controller
      */
     public function index()
     {
-        $tasks = Auth::user()->tasks()->orderBy('due_date', 'asc')->get();
+        // Sắp xếp theo ngày, sau đó là theo giờ
+        $tasks = Auth::user()->tasks()->orderBy('due_date', 'asc')->orderBy('due_time', 'asc')->get();
         return response()->json($tasks);
     }
 
@@ -27,6 +28,7 @@ class TaskController extends Controller
             'title' => 'required|string|max:255',
             'note' => 'nullable|string',
             'due_date' => 'required|date',
+            'due_time' => 'nullable|date_format:H:i', // <-- THÊM VALIDATION CHO GIỜ
             'is_fixed' => 'sometimes|boolean',
             'type' => 'nullable|string',
         ]);
@@ -66,6 +68,7 @@ class TaskController extends Controller
             'title' => 'sometimes|required|string|max:255',
             'note' => 'nullable|string',
             'due_date' => 'sometimes|required|date',
+            'due_time' => 'nullable|date_format:H:i', // <-- THÊM VALIDATION CHO GIỜ
             'is_completed' => 'sometimes|boolean',
             'is_fixed' => 'sometimes|boolean',
             'type' => 'nullable|string',
@@ -95,3 +98,4 @@ class TaskController extends Controller
         return response()->json(null, 204); // 204 No Content
     }
 }
+

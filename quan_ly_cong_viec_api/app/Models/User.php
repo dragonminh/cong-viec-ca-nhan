@@ -6,12 +6,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens; // <-- 1. THÊM DÒNG NÀY
-use App\Models\Task;
+use Laravel\Sanctum\HasApiTokens; // <-- ĐẢM BẢO CÓ DÒNG NÀY
+
 class User extends Authenticatable
 {
-    // 2. THÊM "HasApiTokens" VÀO DÒNG NÀY
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable; // <-- VÀ CÓ 'HasApiTokens' Ở ĐÂY
 
     /**
      * The attributes that are mass assignable.
@@ -22,7 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'fcm_token',
+        'fcm_token', // <-- Thêm 'fcm_token' vào đây
     ];
 
     /**
@@ -36,20 +35,18 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      *
-     * @return array<string, string>
+     * @var array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+    ];
+
+    // Định nghĩa mối quan hệ: 1 User có nhiều Task
     public function tasks()
-{
-    // ĐÚNG:
-    return $this->hasMany(Task::class);
-}
+    {
+        return $this->hasMany(Task::class);
+    }
 }

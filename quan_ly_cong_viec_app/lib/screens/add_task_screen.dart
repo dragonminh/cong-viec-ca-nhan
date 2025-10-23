@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:quan_ly_cong_viec_app/api/api_service.dart';
 import 'package:quan_ly_cong_viec_app/models/task.dart';
+import 'package:quan_ly_cong_viec_app/services/notification_service.dart';
 
 class AddTaskScreen extends StatefulWidget {
-  // Thêm 2 tham số tùy chọn vào constructor
-  final DateTime? initialDate; // Dùng khi thêm mới từ lịch
-  final Task? taskToEdit; // Dùng khi sửa một công việc đã có
+  final DateTime? initialDate;
+  final Task? taskToEdit;
 
   const AddTaskScreen({super.key, this.initialDate, this.taskToEdit});
 
@@ -15,89 +15,98 @@ class AddTaskScreen extends StatefulWidget {
 }
 
 class _AddTaskScreenState extends State<AddTaskScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _noteController = TextEditingController();
-  DateTime? _selectedDate;
+  late DateTime _selectedDate;
+  TimeOfDay? _selectedTime;
   bool _isLoading = false;
-
-  // Biến để xác định đang ở chế độ "Sửa" hay không
-  bool get _isEditing => widget.taskToEdit != null;
 
   @override
   void initState() {
     super.initState();
-    // Nếu là chế độ "Sửa", điền thông tin của công việc vào form
-    if (_isEditing) {
-      final task = widget.taskToEdit!;
-      _titleController.text = task.title;
-      _noteController.text = task.note ?? '';
-      _selectedDate = DateFormat('yyyy-MM-dd').parse(task.dueDate);
+    if (widget.taskToEdit != null) {
+      // Chế độ sửa
+      _titleController.text = widget.taskToEdit!.title;
+      _noteController.text = widget.taskToEdit!.note ?? '';
+      _selectedDate = DateFormat('yyyy-MM-dd').parse(widget.taskToEdit!.dueDate);
+      if (widget.taskToEdit!.dueTime != null) {
+        final timeParts = widget.taskToEdit!.dueTime!.split(':');
+        _selectedTime = TimeOfDay(
+            hour: int.parse(timeParts[0]), minute: int.parse(timeParts[1]));
+      }
     } else {
-      // Nếu là chế độ "Thêm", lấy ngày từ màn hình chính
-      _selectedDate = widget.initialDate;
+      // Chế độ thêm mới
+      _selectedDate = widget.initialDate ?? DateTime.now();
     }
   }
 
-  Future<void> _presentDatePicker() async {
-    final now = DateTime.now();
-    final firstDate = _isEditing ? DateTime(now.year - 5) : now;
-    final pickedDate = await showDatePicker(
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectTime() async {
+    final TimeOfDay? picked = await showTimePicker(
       context: context,
-      initialDate: _selectedDate ?? now,
-      firstDate: firstDate,
-      lastDate: DateTime(now.year + 5),
+      initialTime: _selectedTime ?? TimeOfDay.now(),
     );
-    if (pickedDate != null) {
+    if (picked != null && picked != _selectedTime) {
       setState(() {
-        _selectedDate = pickedDate;
+        _selectedTime = picked;
       });
     }
   }
 
-  // Hàm này bây giờ xử lý cả "Lưu" và "Cập nhật"
-  void _submitTask() async {
-    if (_titleController.text.trim().isEmpty || _selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập tiêu đề và chọn ngày.')),
-      );
-      return;
-    }
+  Future<void> _saveTask() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() { _isLoading = true; });
 
-    setState(() {
-      _isLoading = true;
-    });
+      try {
+        final String? formattedTime = _selectedTime != null
+            ? '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}'
+            : null;
 
-    try {
-      if (_isEditing) {
-        // Gọi API cập nhật
-        await ApiService.updateTask(
-          widget.taskToEdit!.id,
-          _titleController.text,
-          _noteController.text.isEmpty ? null : _noteController.text,
-          _selectedDate!,
-        );
-      } else {
-        // Gọi API tạo mới
-        await ApiService.createTask(
-          _titleController.text,
-          _noteController.text.isEmpty ? null : _noteController.text,
-          _selectedDate!,
-        );
-      }
+        Map<String, dynamic> response;
+        if (widget.taskToEdit == null) {
+          // Thêm công việc mới
+          response = await ApiService.createTask(
+            _titleController.text,
+            _noteController.text,
+            _selectedDate,
+            formattedTime,
+          );
+        } else {
+          // Cập nhật công việc
+          response = await ApiService.updateTask(
+            widget.taskToEdit!.id,
+            {
+              'title': _titleController.text,
+              'note': _noteController.text,
+              'due_date': DateFormat('yyyy-MM-dd').format(_selectedDate),
+              'due_time': formattedTime,
+            },
+          );
+        }
 
-      if (!mounted) return;
-      // Gửi tín hiệu 'true' để màn hình chính biết cần làm mới
-      Navigator.pop(context, true);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Thao tác thất bại: $e')));
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        final savedTask = Task.fromJson(response);
+        await NotificationService.scheduleNotificationForTask(savedTask);
+
+        if (mounted) {
+          Navigator.of(context).pop(true); // Trả về true để báo thành công
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Thao tác thất bại: $e')),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() { _isLoading = false; });
+        }
       }
     }
   }
@@ -106,53 +115,60 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // Thay đổi tiêu đề tùy theo chế độ
-        title: Text(_isEditing ? 'Sửa công việc' : 'Thêm công việc mới'),
+        title: Text(widget.taskToEdit == null ? 'Thêm công việc' : 'Sửa công việc'),
         actions: [
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.only(right: 16.0),
-              child: Center(
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2.0,
-                ),
-              ),
-            )
-          else
-            IconButton(icon: const Icon(Icons.save), onPressed: _submitTask),
+          IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: _isLoading ? null : _saveTask,
+          )
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16.0),
           children: [
-            TextField(
+            TextFormField(
               controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Tiêu đề'),
+              decoration: const InputDecoration(labelText: 'Tiêu đề công việc'),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Vui lòng nhập tiêu đề';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 16),
-            TextField(
+            TextFormField(
               controller: _noteController,
-              decoration: const InputDecoration(
-                labelText: 'Ghi chú (tùy chọn)',
-              ),
+              decoration: const InputDecoration(labelText: 'Ghi chú (tùy chọn)'),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _selectedDate == null
-                        ? 'Chưa chọn ngày'
-                        : 'Ngày: ${DateFormat('dd/MM/yyyy').format(_selectedDate!)}',
-                  ),
-                ),
-                TextButton(
-                  onPressed: _presentDatePicker,
-                  child: const Text('Thay đổi'),
-                ),
-              ],
+            ListTile(
+              leading: const Icon(Icons.calendar_today),
+              title: const Text('Ngày hết hạn'),
+              subtitle: Text(DateFormat('dd/MM/yyyy').format(_selectedDate)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                final DateTime? picked = await showDatePicker(
+                  context: context,
+                  initialDate: _selectedDate,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2030),
+                );
+                if (picked != null && picked != _selectedDate) {
+                  setState(() {
+                    _selectedDate = picked;
+                  });
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.access_time),
+              title: const Text('Giờ nhắc nhở'),
+              subtitle: Text(_selectedTime != null ? _selectedTime!.format(context) : 'Chưa đặt (sẽ không thông báo)'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _selectTime,
             ),
           ],
         ),
@@ -160,3 +176,4 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     );
   }
 }
+

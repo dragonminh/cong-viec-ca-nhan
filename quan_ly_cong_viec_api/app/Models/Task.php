@@ -15,13 +15,24 @@ class Task extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'user_id',
         'title',
         'note',
         'due_date',
+        'due_time', // <-- ĐÃ THÊM
         'is_completed',
         'is_fixed',
         'type',
+        'user_id',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     * Giúp Laravel tự động chuyển đổi kiểu dữ liệu.
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'is_completed' => 'boolean',
+        'is_fixed' => 'boolean',
     ];
 
     /**
@@ -32,3 +43,4 @@ class Task extends Model
         return $this->belongsTo(User::class);
     }
 }
+

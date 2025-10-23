@@ -1,29 +1,26 @@
 name: quan_ly_cong_viec_app
 description: "A new Flutter project."
-publish_to: "none" 
+publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0' # Mở rộng khoảng tương thích sdk
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
-  flutter_localizations:
-    sdk: flutter
+  # ĐÃ XÓA flutter_localizations
 
   cupertino_icons: ^1.0.8
-  http: ^1.2.1 
-  flutter_secure_storage: ^9.2.2 
-  # SỬA LỖI: Nâng cấp intl để khớp với yêu cầu của Flutter SDK
-  intl: ^0.20.2
-  table_calendar: ^3.1.2 
-  provider: ^6.1.2 
+  http: ^1.2.1
+  flutter_secure_storage: ^9.2.2
+  intl: ^0.20.2 # Giữ phiên bản đúng
+  table_calendar: ^3.1.2
+  provider: ^6.1.2
   shared_preferences: ^2.2.3
-  # SỬA LỖI: Nâng cấp awesome_notifications để tương thích với intl mới
   awesome_notifications: ^0.10.1
-  
+  google_generative_ai: ^0.4.7
 
 dev_dependencies:
   flutter_test:
@@ -33,4 +30,4 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
+  # ĐÃ XÓA generate: true

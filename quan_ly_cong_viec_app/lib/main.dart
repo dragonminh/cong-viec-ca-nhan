@@ -7,18 +7,12 @@ import 'package:quan_ly_cong_viec_app/screens/auth_check_screen.dart';
 // THÊM VÀO: Import Dịch vụ Thông báo
 import 'package:quan_ly_cong_viec_app/services/notification_service.dart';
 
+
 void main() async {
-  // Đảm bảo các plugin đã được khởi tạo trước khi chạy app
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Khởi tạo định dạng ngày tháng cho Tiếng Việt
   await initializeDateFormatting('vi_VN', null);
-
-  // THÊM VÀO: Khởi tạo Dịch vụ Thông báo
   await NotificationService.initializeNotifications();
-
   runApp(
-    // Sử dụng MultiProvider để cung cấp nhiều trạng thái cho ứng dụng
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
